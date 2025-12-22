@@ -7,3 +7,10 @@ output/*.png
 dist/
 build/
 .DS_Store
+
+# Claude Code
+.claude/
+
+# Project docs
+Project.md
+SAAS_PROJECT.md
