@@ -1,0 +1,47 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv
+venv
+env
+*.egg-info
+.pytest_cache
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Frontend (not needed for backend Docker)
+frontend/
+node_modules/
+
+# Environment files (will be set via Railway)
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# Markdown/docs
+*.md
+LICENSE
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cached data
+*.csv
+*.xlsx
+data/
+output/*.png
+user_data/
+user_output/
