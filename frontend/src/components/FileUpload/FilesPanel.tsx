@@ -7,9 +7,10 @@ import { FileSpreadsheet } from "lucide-react";
 
 interface FilesPanelProps {
   onFileSelect?: (file: UserFile) => void;
+  onFileUploaded?: () => void;
 }
 
-export function FilesPanel({ onFileSelect }: FilesPanelProps) {
+export function FilesPanel({ onFileSelect, onFileUploaded }: FilesPanelProps) {
   const { files, isLoading, deleteFile, addFile } = useFiles();
 
   const handleUploadComplete = (file: { id: string; filename: string; originalName: string; size: number; mimeType: string }) => {
@@ -23,6 +24,8 @@ export function FilesPanel({ onFileSelect }: FilesPanelProps) {
       created_at: new Date().toISOString(),
     };
     addFile(userFile);
+    // Trigger usage refresh after upload
+    onFileUploaded?.();
   };
 
   return (

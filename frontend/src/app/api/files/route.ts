@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 // GET: List user's files
 export async function GET() {
   const supabase = await createClient();
@@ -115,6 +117,26 @@ export async function POST(request: NextRequest) {
         { error: "Failed to save file metadata" },
         { status: 500 }
       );
+    }
+
+    // Track file upload usage
+    try {
+      await fetch(`${BACKEND_URL}/api/track-usage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: user.id,
+          action: "file_upload",
+          metadata: {
+            file_id: fileRecord.id,
+            filename: file.name,
+            size: file.size,
+          },
+        }),
+      });
+    } catch (e) {
+      // Don't fail the upload if tracking fails
+      console.error("Failed to track upload:", e);
     }
 
     return NextResponse.json({

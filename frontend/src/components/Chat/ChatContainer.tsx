@@ -16,9 +16,10 @@ import {
 
 interface ChatContainerProps {
   selectedFileId?: string;
+  onMessageSent?: () => void;
 }
 
-export function ChatContainer({ selectedFileId }: ChatContainerProps) {
+export function ChatContainer({ selectedFileId, onMessageSent }: ChatContainerProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false); // Closed by default on mobile
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
 
@@ -83,6 +84,8 @@ export function ChatContainer({ selectedFileId }: ChatContainerProps) {
     } else {
       await sendMessage(content, activeConversation.id, selectedFileId);
     }
+    // Trigger usage refresh after message is sent
+    onMessageSent?.();
   };
 
   const handleSelectConversation = (conversation: Conversation) => {
@@ -91,7 +94,7 @@ export function ChatContainer({ selectedFileId }: ChatContainerProps) {
   };
 
   return (
-    <div className="relative flex h-[600px] border rounded-lg overflow-hidden bg-white dark:bg-zinc-900">
+    <div className="relative flex h-full border rounded-lg overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
