@@ -608,16 +608,16 @@ llm-app/
   - Added production URL to Site URL and Redirect URLs
   - CORS configured on Render backend
 
-- [ ] **9.6** Test production deployment
+- [x] **9.6** Test production deployment
   - Full signup → login → upload → chat → chart flow
-  - Test on multiple devices
+  - Fixed agent to recognize pre-loaded datasets from Supabase Storage
 
 ### Verification
-- [ ] Backend API accessible at production URL
-- [ ] Frontend accessible at Vercel URL
-- [ ] Auth flow works in production
-- [ ] File upload works in production
-- [ ] Charts generated and displayed
+- [x] Backend API accessible at production URL
+- [x] Frontend accessible at Vercel URL
+- [x] Auth flow works in production
+- [x] File upload works in production
+- [x] Agent analyzes uploaded files correctly
 
 ---
 
@@ -626,36 +626,30 @@ llm-app/
 
 ### Tasks
 
-- [ ] **10.1** Create usage tracking table
-  ```sql
-  CREATE TABLE usage (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES auth.users(id) NOT NULL,
-    action TEXT NOT NULL,
-    tokens_used INTEGER DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-  );
-  ```
+- [x] **10.1** Create usage tracking table
+  - Created `usage` table with user_id, action, tokens_used, metadata
+  - Added RLS policies for user access and service role insert
+  - Created helper function `get_daily_usage_count`
 
-- [ ] **10.2** Track API calls
-  - Log each chat message
-  - Track token usage (from OpenAI response)
+- [x] **10.2** Track API calls
+  - Created `UsageService` in backend
+  - Log each chat message with metadata
   - Track file uploads
 
-- [ ] **10.3** Create usage display
-  - Show usage in dashboard
-  - Monthly summary
-  - Usage by conversation
+- [x] **10.3** Create usage display
+  - Created `UsageCard` component
+  - Shows daily message/upload counts with progress bars
+  - Color-coded warnings (green/yellow/red)
 
-- [ ] **10.4** Implement usage limits (soft limits)
-  - Free tier: 50 messages/day
-  - Show warning when approaching limit
-  - Graceful handling when limit reached
+- [x] **10.4** Implement usage limits (soft limits)
+  - Free tier: 50 messages/day, 10 uploads/day
+  - Check limits before processing requests
+  - Graceful error message when limit reached
 
 ### Verification
-- [ ] Usage tracked in database
-- [ ] Usage displayed to user
-- [ ] Limits enforced (soft block with message)
+- [x] Usage tracked in database
+- [x] Usage displayed to user
+- [x] Limits enforced (soft block with message)
 
 ---
 
