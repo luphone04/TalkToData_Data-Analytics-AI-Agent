@@ -590,23 +590,23 @@ llm-app/
   - Created `railway.json` and `render.yaml`
   - Environment variables configured via platform settings
 
-- [ ] **9.2** Deploy backend to Railway/Render
-  - Connect GitHub repo
+- [x] **9.2** Deploy backend to Render
+  - Connected GitHub repo
   - Set environment variables
-  - Get production URL
+  - Production URL: `https://talktodata-api.onrender.com`
 
-- [ ] **9.3** Prepare frontend for deployment
-  - Update API URL to production backend
-  - Ensure env vars are set for production
+- [x] **9.3** Prepare frontend for deployment
+  - API URL set to production backend
+  - Env vars configured in Vercel
 
-- [ ] **9.4** Deploy frontend to Vercel
-  - Connect GitHub repo
+- [x] **9.4** Deploy frontend to Vercel
+  - Connected GitHub repo
   - Set environment variables
-  - Configure custom domain (optional)
+  - URL: `https://data-scope-ai-agent-mfbt58vgx-lu-phone-maws-projects.vercel.app`
 
-- [ ] **9.5** Update Supabase settings
-  - Add production URLs to allowed redirects
-  - Enable email confirmations (optional)
+- [x] **9.5** Update Supabase settings
+  - Added production URL to Site URL and Redirect URLs
+  - CORS configured on Render backend
 
 - [ ] **9.6** Test production deployment
   - Full signup → login → upload → chat → chart flow

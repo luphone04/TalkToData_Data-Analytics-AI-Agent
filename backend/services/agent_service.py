@@ -2,6 +2,8 @@ import sys
 import os
 import re
 import uuid
+import httpx
+import pandas as pd
 from pathlib import Path
 
 # Add parent directory to path for importing existing agent
@@ -34,17 +36,22 @@ class AgentService:
         if settings.supabase_url and settings.supabase_anon_key:
             self.supabase = create_client(settings.supabase_url, settings.supabase_anon_key)
 
-    async def chat(self, message: str, conversation_history: list[dict] = None) -> dict:
+    async def chat(self, message: str, conversation_history: list[dict] = None, file_info: dict = None) -> dict:
         """
         Send a message to the agent and get a response.
 
         Args:
             message: User's message
             conversation_history: List of previous messages for context
+            file_info: Dict with filename and download_url from Supabase Storage
 
         Returns:
             dict with response text, charts, and any data previews
         """
+        # Download and load file if provided
+        if file_info and file_info.get("download_url"):
+            await self._download_and_load_file(file_info)
+
         # Build context from history
         context = ""
         if conversation_history:
@@ -52,6 +59,11 @@ class AgentService:
                 role = msg.get("role", "user")
                 content = msg.get("content", "")
                 context += f"{role}: {content}\n"
+
+        # Add loaded files info to message context
+        loaded_files = list(LOADED_DATASETS.keys())
+        if loaded_files:
+            message = f"[Available datasets: {', '.join(loaded_files)}]\n\n{message}"
 
         # Run the agent
         full_message = f"{context}\nuser: {message}" if context else message
@@ -88,6 +100,49 @@ class AgentService:
                 "datasets_loaded": list(LOADED_DATASETS.keys()),
                 "error": True,
             }
+
+    async def _download_and_load_file(self, file_info: dict) -> bool:
+        """Download file from Supabase Storage URL and load into LOADED_DATASETS."""
+        try:
+            filename = file_info.get("filename", "data.csv")
+            download_url = file_info.get("download_url")
+
+            if not download_url:
+                print(f"No download URL for file: {filename}")
+                return False
+
+            # Skip if already loaded
+            if filename in LOADED_DATASETS:
+                print(f"File already loaded: {filename}")
+                return True
+
+            # Download file content
+            async with httpx.AsyncClient() as client:
+                response = await client.get(download_url)
+                response.raise_for_status()
+                content = response.content
+
+            # Save to local user directory
+            local_path = self.user_data_dir / filename
+            local_path.write_bytes(content)
+
+            # Load into pandas DataFrame
+            if filename.lower().endswith('.csv'):
+                df = pd.read_csv(local_path)
+            elif filename.lower().endswith(('.xlsx', '.xls')):
+                df = pd.read_excel(local_path)
+            else:
+                print(f"Unsupported file type: {filename}")
+                return False
+
+            # Add to LOADED_DATASETS so agent can access it
+            LOADED_DATASETS[filename] = df
+            print(f"Loaded file: {filename} with {len(df)} rows")
+            return True
+
+        except Exception as e:
+            print(f"Failed to download/load file: {e}")
+            return False
 
     def _extract_chart_paths(self, response: str) -> list[str]:
         """Extract chart file paths from agent response."""

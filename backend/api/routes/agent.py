@@ -6,12 +6,19 @@ from services.agent_service import AgentService
 router = APIRouter(prefix="/api", tags=["agent"])
 
 
+class FileInfo(BaseModel):
+    """File information from Supabase Storage."""
+    filename: str
+    download_url: str | None = None
+
+
 class ChatRequest(BaseModel):
     """Request body for chat endpoint."""
     message: str
     conversation_id: str | None = None
     user_id: str = "anonymous"  # TODO: Replace with actual auth
     history: list[dict] | None = None
+    file: FileInfo | None = None
 
 
 class ChatResponse(BaseModel):
@@ -35,9 +42,19 @@ async def chat(request: ChatRequest):
     """
     try:
         service = AgentService(user_id=request.user_id)
+
+        # Prepare file info if provided
+        file_info = None
+        if request.file:
+            file_info = {
+                "filename": request.file.filename,
+                "download_url": request.file.download_url,
+            }
+
         result = await service.chat(
             message=request.message,
             conversation_history=request.history,
+            file_info=file_info,
         )
         return ChatResponse(**result)
 
