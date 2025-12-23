@@ -84,3 +84,15 @@ The agent has access to **11 tools** across 3 categories:
 - **Visualization Tools** - Bar charts, line charts, histograms, scatter plots, pie charts
 
 Tools are Python functions with the `@function_tool` decorator. The SDK automatically generates JSON schemas from type hints and docstrings for the LLM.
+
+---
+
+## Future Enhancements
+
+| Feature | Description |
+|---------|-------------|
+| **More File Formats** | Support for JSON, Parquet, Google Sheets, and direct database connections |
+| **Advanced Chart Types** | Heatmaps, box plots, geographic maps, treemaps, and interactive dashboards |
+| **Export Reports as PDF** | Generate downloadable PDF reports with charts and analysis summaries |
+| **Advanced Analytics** | Time series forecasting, anomaly detection, clustering, and predictive modeling |
+| **Natural Language to SQL** | Preview the generated SQL queries before execution for transparency and learning |
