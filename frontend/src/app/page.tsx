@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { BarChart3, FileSpreadsheet, MessageSquare, Sparkles, Zap, Shield, Download } from "lucide-react";
+import { BarChart3, FileSpreadsheet, MessageSquare, Sparkles, Zap, Shield, Download, Info } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function Home() {
@@ -14,7 +14,11 @@ export default async function Home() {
           <BarChart3 className="h-8 w-8 text-blue-600" />
           <span className="text-xl font-bold">TalkToData</span>
         </div>
-        <div className="flex gap-4">
+        <div className="flex items-center gap-4">
+          <Link href="/how-it-works" className="hidden sm:flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+            <Info className="h-4 w-4" />
+            How it Works
+          </Link>
           {user ? (
             <Link href="/dashboard">
               <Button>Go to Dashboard</Button>

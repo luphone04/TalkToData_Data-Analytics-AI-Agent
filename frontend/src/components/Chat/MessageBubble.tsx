@@ -51,7 +51,18 @@ export function MessageBubble({ role, content, timestamp, charts }: MessageBubbl
             <div className="whitespace-pre-wrap break-words overflow-hidden">{content}</div>
           ) : (
             <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-pre:bg-zinc-200 dark:prose-pre:bg-zinc-900 prose-code:text-blue-600 dark:prose-code:text-blue-400">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  // Filter out images with empty src to avoid console errors
+                  img: ({ src, alt, ...props }) => {
+                    if (!src) return null;
+                    return <img src={src} alt={alt || ""} {...props} />;
+                  },
+                }}
+              >
+                {content}
+              </ReactMarkdown>
             </div>
           )}
           {timestamp && (

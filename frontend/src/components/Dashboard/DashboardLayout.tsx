@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, Info } from "lucide-react";
 import { UserMenu } from "@/components/Auth/UserMenu";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UsageBadge } from "@/components/Usage";
 import { DashboardContent } from "./DashboardContent";
+import { Button } from "@/components/ui/button";
 
 interface DashboardLayoutProps {
   userEmail: string;
@@ -32,6 +33,12 @@ export function DashboardLayout({ userEmail }: DashboardLayoutProps) {
           <div className="flex items-center gap-3">
             <UsageBadge refreshTrigger={usageRefreshTrigger} />
             <div className="hidden sm:block w-px h-6 bg-zinc-200 dark:bg-zinc-700" />
+            <Button variant="ghost" size="sm" asChild className="hidden sm:flex">
+              <Link href="/how-it-works" className="flex items-center gap-1.5">
+                <Info className="h-4 w-4" />
+                <span>How it Works</span>
+              </Link>
+            </Button>
             <ThemeToggle />
             <UserMenu email={userEmail} />
           </div>
