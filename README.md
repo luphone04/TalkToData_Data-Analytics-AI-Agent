@@ -2,6 +2,16 @@
 
 AI-powered data analysis SaaS application. Upload your data, ask questions in natural language, and get insights with visualizations.
 
+## Screenshots
+
+![Screenshot 1](Screenshot%202025-12-23%20at%2012.54.39.png)
+
+![Screenshot 2](Screenshot%202025-12-23%20at%2012.54.49.png)
+
+![Screenshot 3](Screenshot%202025-12-23%20at%2012.55.08.png)
+
+---
+
 ## Architecture
 
 ```
