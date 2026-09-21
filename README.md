@@ -54,8 +54,8 @@ AI-powered data analysis SaaS application. Upload your data, ask questions in na
                                     │
                                     ▼
                         ┌───────────────────────┐
-                        │      OpenAI API       │
-                        │       (GPT-4o)        │
+                        │      Gemini API       │
+                        │       (Gemini 3.6 Flash)        │
                         └───────────────────────┘
 ```
 
@@ -63,13 +63,13 @@ AI-powered data analysis SaaS application. Upload your data, ask questions in na
 
 ## AI Agent
 
-The core intelligence is an **Agentic AI** built with the **OpenAI Agents SDK**, powered by **GPT-4o**.
+The core intelligence is an **Agentic AI** built with the **OpenAI Agents SDK**, powered by **Gemini 3.6 Flash**.
 
 ### Key Concepts
 
 | Concept | Description |
 |---------|-------------|
-| **LLM Backbone** | GPT-4o provides reasoning, natural language understanding, and decision-making |
+| **LLM Backbone** | Gemini 3.6 Flash provides reasoning, natural language understanding, and decision-making |
 | **Tool Use / Function Calling** | Agent can invoke Python functions to interact with data and generate visualizations |
 | **ReAct Pattern** | Agent iteratively **Reasons** about the task, **Acts** by calling tools, and **Observes** results |
 | **Agentic Loop** | Autonomous multi-step execution until the task is complete |
@@ -96,3 +96,24 @@ Tools are Python functions with the `@function_tool` decorator. The SDK automati
 | **Export Reports as PDF** | Generate downloadable PDF reports with charts and analysis summaries |
 | **Advanced Analytics** | Time series forecasting, anomaly detection, clustering, and predictive modeling |
 | **Natural Language to SQL** | Preview the generated SQL queries before execution for transparency and learning |
+
+## Gemini setup
+
+The agent uses Google's OpenAI-compatible Chat Completions endpoint. The OpenAI
+Agents SDK still runs the Python tools, but inference goes to Google; an OpenAI
+API key is not required and OpenAI tracing is disabled.
+
+1. Create an API key in https://aistudio.google.com/apikey.
+2. Copy `.env.example` to `.env` at the repository root and fill in your keys.
+   Hosted backends should set `GEMINI_API_KEY` and `GEMINI_MODEL` in their
+   environment settings instead. Existing Supabase configuration is still needed.
+3. Install `backend/requirements.txt`, then run `cd backend && uvicorn main:app --reload`.
+   For the standalone terminal app, run `python main.py` from the repository root.
+4. Redeploy the backend after changing its environment. The frontend's existing
+   Supabase and backend URL environment variables remain necessary.
+
+`GEMINI_MODEL` defaults to `gemini-3.6-flash`. Free-tier availability and quotas
+are controlled by Google and your project, not this code. Check AI Studio before
+enabling billing. Each analysis can make multiple model calls.
+
+Do not commit API keys. Rotate any key shared in chat or public files.
