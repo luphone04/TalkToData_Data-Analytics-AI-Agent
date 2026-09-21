@@ -3,7 +3,31 @@ Data Analysis Agent definition.
 Configures the AI agent with all available tools and instructions.
 """
 
-from agents import Agent
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+from openai import AsyncOpenAI
+from agents import Agent, OpenAIChatCompletionsModel, set_tracing_disabled
+
+# Support both the root CLI and the backend working directory.
+load_dotenv(Path(__file__).parent / ".env")
+load_dotenv(Path(__file__).parent / "backend" / ".env")
+
+# Gemini requests and tool results must not be exported to OpenAI tracing.
+set_tracing_disabled(True)
+
+gemini_key = os.getenv("GEMINI_API_KEY")
+if not gemini_key:
+    raise RuntimeError("Set GEMINI_API_KEY in your backend environment or .env file.")
+
+model = OpenAIChatCompletionsModel(
+    model=os.getenv("GEMINI_MODEL", "gemini-3.6-flash"),
+    openai_client=AsyncOpenAI(
+        api_key=gemini_key,
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+    ),
+)
 
 # Import all tools from the tools package
 from tools import (
@@ -28,7 +52,7 @@ from tools import (
 # Define the Data Analyst agent
 data_analyst = Agent(
     name="Data Analyst",
-    model="gpt-4o",
+    model=model,
     instructions="""You are a data analysis assistant. Help users understand and visualize their data.
 
 ## Your Capabilities
