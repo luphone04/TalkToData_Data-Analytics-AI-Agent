@@ -14,8 +14,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Check for API key before importing agent (which requires it)
-if not os.getenv("OPENAI_API_KEY"):
-    print("Error: OPENAI_API_KEY not found.")
+if not os.getenv("GEMINI_API_KEY"):
+    print("Error: GEMINI_API_KEY not found.")
     print("Please create a .env file with your API key:")
     print("  cp .env.example .env")
     print("  # Then edit .env and add your key")
@@ -156,11 +156,11 @@ async def main():
 
             # Handle specific error types
             if "AuthenticationError" in error_type or "invalid_api_key" in str(e).lower():
-                print(f"\nError: Invalid API key. Please check your OPENAI_API_KEY in .env\n")
+                print(f"\nError: Invalid API key. Please check your GEMINI_API_KEY in .env\n")
             elif "RateLimitError" in error_type or "rate_limit" in str(e).lower():
                 print(f"\nError: Rate limit exceeded. Please wait a moment and try again.\n")
             elif "APIConnectionError" in error_type or "connection" in str(e).lower():
-                print(f"\nError: Could not connect to OpenAI API. Check your internet connection.\n")
+                print(f"\nError: Could not connect to Gemini API. Check your internet connection.\n")
             elif "InsufficientQuotaError" in error_type or "quota" in str(e).lower():
                 print(f"\nError: API quota exceeded. Please check your OpenAI account billing.\n")
             else:
