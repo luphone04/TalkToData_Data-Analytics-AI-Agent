@@ -3,7 +3,9 @@ Visualization tools for the Data Analysis Agent.
 Generates and saves matplotlib charts to the output directory.
 """
 
-import os
+import threading
+import uuid
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -20,6 +22,12 @@ from . import LOADED_DATASETS
 # Output directory for charts
 OUTPUT_DIR = Path(__file__).parent.parent / "output"
 
+# The Agents SDK runs sync tools in worker threads, and several tool calls from one
+# model turn (or from concurrent requests) can run at the same time. pyplot's figure
+# registry and rcParams are process-global, so the whole plotting lifecycle is
+# serialized here; drawing itself only uses the explicit fig/ax handles.
+_PLOT_LOCK = threading.Lock()
+
 
 def _get_loaded_df(filename: str) -> tuple[pd.DataFrame | None, str]:
     """Get a loaded DataFrame or return an error message."""
@@ -29,35 +37,50 @@ def _get_loaded_df(filename: str) -> tuple[pd.DataFrame | None, str]:
     return df, ""
 
 
-def _save_chart(title: str) -> str:
-    """Save the current matplotlib figure and return the file path."""
+def _chart_style():
+    """Return a context manager applying consistent chart styling."""
+    for style in ('seaborn-v0_8-whitegrid', 'seaborn-whitegrid', 'ggplot'):
+        if style in plt.style.available:
+            return plt.style.context(style)
+    return plt.style.context('default')
+
+
+@contextmanager
+def _new_figure(figsize: tuple[float, float]):
+    """
+    Create a figure for one chart and always close it afterwards.
+
+    Holds the plotting lock from creation until the figure is closed, on both
+    success and failure.
+    """
+    with _PLOT_LOCK, _chart_style():
+        fig, ax = plt.subplots(figsize=figsize)
+        try:
+            yield fig, ax
+        finally:
+            plt.close(fig)
+
+
+def _rotate_x_labels(ax) -> None:
+    """Rotate x tick labels on this axes only."""
+    plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+
+
+def _save_chart(fig, title: str) -> str:
+    """Save the given figure and return the file path."""
     # Ensure output directory exists
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Create safe filename
+    # Create a safe, collision-resistant filename
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_title = "".join(c if c.isalnum() or c in "_ -" else "_" for c in title)
     safe_title = safe_title.replace(" ", "_").lower()[:50]
-    filename = f"{safe_title}_{timestamp}.png"
+    filename = f"{safe_title}_{timestamp}_{uuid.uuid4().hex[:8]}.png"
     filepath = OUTPUT_DIR / filename
 
-    # Save and close
-    plt.savefig(filepath, dpi=150, bbox_inches='tight', facecolor='white')
-    plt.close()
+    fig.savefig(filepath, dpi=150, bbox_inches='tight', facecolor='white')
 
     return str(filepath)
-
-
-def _setup_chart_style():
-    """Apply consistent chart styling."""
-    try:
-        plt.style.use('seaborn-v0_8-whitegrid')
-    except OSError:
-        # Fallback for older matplotlib versions
-        try:
-            plt.style.use('seaborn-whitegrid')
-        except OSError:
-            plt.style.use('ggplot')
 
 
 # ============================================================
@@ -90,34 +113,31 @@ def _create_bar_chart(filename: str, x_column: str, y_column: str, title: str) -
         if len(plot_data) > 15:
             plot_data = plot_data.head(15)
 
-        _setup_chart_style()
-        fig, ax = plt.subplots(figsize=(10, 6))
+        with _new_figure((10, 6)) as (fig, ax):
+            bars = ax.bar(plot_data[x_column].astype(str), plot_data[y_column], color='steelblue', edgecolor='white')
 
-        bars = ax.bar(plot_data[x_column].astype(str), plot_data[y_column], color='steelblue', edgecolor='white')
+            ax.set_xlabel(x_column, fontsize=12)
+            ax.set_ylabel(y_column, fontsize=12)
+            ax.set_title(title, fontsize=14, fontweight='bold')
 
-        ax.set_xlabel(x_column, fontsize=12)
-        ax.set_ylabel(y_column, fontsize=12)
-        ax.set_title(title, fontsize=14, fontweight='bold')
+            # Rotate x labels if needed
+            if len(plot_data) > 5 or plot_data[x_column].astype(str).str.len().max() > 8:
+                _rotate_x_labels(ax)
 
-        # Rotate x labels if needed
-        if len(plot_data) > 5 or plot_data[x_column].astype(str).str.len().max() > 8:
-            plt.xticks(rotation=45, ha='right')
+            # Add value labels on bars
+            for bar in bars:
+                height = bar.get_height()
+                ax.annotate(f'{height:,.0f}',
+                           xy=(bar.get_x() + bar.get_width() / 2, height),
+                           xytext=(0, 3), textcoords="offset points",
+                           ha='center', va='bottom', fontsize=9)
 
-        # Add value labels on bars
-        for bar in bars:
-            height = bar.get_height()
-            ax.annotate(f'{height:,.0f}',
-                       xy=(bar.get_x() + bar.get_width() / 2, height),
-                       xytext=(0, 3), textcoords="offset points",
-                       ha='center', va='bottom', fontsize=9)
-
-        plt.tight_layout()
-        filepath = _save_chart(title)
+            fig.tight_layout()
+            filepath = _save_chart(fig, title)
 
         return f"Bar chart created: {title}\nSaved to: {filepath}\nShows {y_column} by {x_column} ({len(plot_data)} categories)"
 
     except Exception as e:
-        plt.close()
         return f"Error creating bar chart: {str(e)}"
 
 
@@ -149,32 +169,29 @@ def _create_line_chart(filename: str, x_column: str, y_column: str, title: str) 
         # Sort by x
         plot_data = plot_data.sort_values(x_column)
 
-        _setup_chart_style()
-        fig, ax = plt.subplots(figsize=(12, 6))
+        with _new_figure((12, 6)) as (fig, ax):
+            ax.plot(plot_data[x_column], plot_data[y_column],
+                    marker='o', markersize=4, linewidth=2, color='steelblue')
 
-        ax.plot(plot_data[x_column], plot_data[y_column],
-                marker='o', markersize=4, linewidth=2, color='steelblue')
+            ax.set_xlabel(x_column, fontsize=12)
+            ax.set_ylabel(y_column, fontsize=12)
+            ax.set_title(title, fontsize=14, fontweight='bold')
 
-        ax.set_xlabel(x_column, fontsize=12)
-        ax.set_ylabel(y_column, fontsize=12)
-        ax.set_title(title, fontsize=14, fontweight='bold')
+            # Format x-axis for dates
+            if is_datetime:
+                fig.autofmt_xdate()
+            elif len(plot_data) > 10:
+                _rotate_x_labels(ax)
 
-        # Format x-axis for dates
-        if is_datetime:
-            fig.autofmt_xdate()
-        elif len(plot_data) > 10:
-            plt.xticks(rotation=45, ha='right')
+            # Add grid
+            ax.grid(True, alpha=0.3)
 
-        # Add grid
-        ax.grid(True, alpha=0.3)
-
-        plt.tight_layout()
-        filepath = _save_chart(title)
+            fig.tight_layout()
+            filepath = _save_chart(fig, title)
 
         return f"Line chart created: {title}\nSaved to: {filepath}\nShows {y_column} over {x_column} ({len(plot_data)} data points)"
 
     except Exception as e:
-        plt.close()
         return f"Error creating line chart: {str(e)}"
 
 
@@ -197,29 +214,26 @@ def _create_histogram(filename: str, column: str, bins: int, title: str) -> str:
         if len(data) == 0:
             return f"Error: Column '{column}' has no non-null values."
 
-        _setup_chart_style()
-        fig, ax = plt.subplots(figsize=(10, 6))
+        with _new_figure((10, 6)) as (fig, ax):
+            n, bin_edges, patches = ax.hist(data, bins=bins, color='steelblue',
+                                             edgecolor='white', alpha=0.8)
 
-        n, bin_edges, patches = ax.hist(data, bins=bins, color='steelblue',
-                                         edgecolor='white', alpha=0.8)
+            ax.set_xlabel(column, fontsize=12)
+            ax.set_ylabel('Frequency', fontsize=12)
+            ax.set_title(title, fontsize=14, fontweight='bold')
 
-        ax.set_xlabel(column, fontsize=12)
-        ax.set_ylabel('Frequency', fontsize=12)
-        ax.set_title(title, fontsize=14, fontweight='bold')
+            # Add statistics annotation
+            stats_text = f'Mean: {data.mean():.2f}\nStd: {data.std():.2f}\nMin: {data.min():.2f}\nMax: {data.max():.2f}'
+            ax.text(0.95, 0.95, stats_text, transform=ax.transAxes, fontsize=10,
+                    verticalalignment='top', horizontalalignment='right',
+                    bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 
-        # Add statistics annotation
-        stats_text = f'Mean: {data.mean():.2f}\nStd: {data.std():.2f}\nMin: {data.min():.2f}\nMax: {data.max():.2f}'
-        ax.text(0.95, 0.95, stats_text, transform=ax.transAxes, fontsize=10,
-                verticalalignment='top', horizontalalignment='right',
-                bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
-
-        plt.tight_layout()
-        filepath = _save_chart(title)
+            fig.tight_layout()
+            filepath = _save_chart(fig, title)
 
         return f"Histogram created: {title}\nSaved to: {filepath}\nDistribution of {column} ({len(data)} values, {bins} bins)"
 
     except Exception as e:
-        plt.close()
         return f"Error creating histogram: {str(e)}"
 
 
@@ -247,38 +261,35 @@ def _create_scatter_plot(filename: str, x_column: str, y_column: str, title: str
         if len(plot_data) < 2:
             return f"Error: Not enough data points for scatter plot (need at least 2)."
 
-        _setup_chart_style()
-        fig, ax = plt.subplots(figsize=(10, 6))
-
-        ax.scatter(plot_data[x_column], plot_data[y_column],
-                   alpha=0.6, color='steelblue', edgecolors='white', s=60)
-
-        ax.set_xlabel(x_column, fontsize=12)
-        ax.set_ylabel(y_column, fontsize=12)
-        ax.set_title(title, fontsize=14, fontweight='bold')
-
-        # Calculate correlation and add trend line if significant
+        # Calculate correlation for trend line and annotation
         correlation = plot_data[x_column].corr(plot_data[y_column])
 
-        if abs(correlation) >= 0.3:  # Add trend line for meaningful correlations
-            z = np.polyfit(plot_data[x_column], plot_data[y_column], 1)
-            p = np.poly1d(z)
-            x_line = np.linspace(plot_data[x_column].min(), plot_data[x_column].max(), 100)
-            ax.plot(x_line, p(x_line), "r--", alpha=0.8, linewidth=2, label=f'Trend (r={correlation:.2f})')
-            ax.legend()
+        with _new_figure((10, 6)) as (fig, ax):
+            ax.scatter(plot_data[x_column], plot_data[y_column],
+                       alpha=0.6, color='steelblue', edgecolors='white', s=60)
 
-        # Add correlation annotation
-        ax.text(0.05, 0.95, f'Correlation: {correlation:.3f}', transform=ax.transAxes,
-                fontsize=11, verticalalignment='top',
-                bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+            ax.set_xlabel(x_column, fontsize=12)
+            ax.set_ylabel(y_column, fontsize=12)
+            ax.set_title(title, fontsize=14, fontweight='bold')
 
-        plt.tight_layout()
-        filepath = _save_chart(title)
+            if abs(correlation) >= 0.3:  # Add trend line for meaningful correlations
+                z = np.polyfit(plot_data[x_column], plot_data[y_column], 1)
+                p = np.poly1d(z)
+                x_line = np.linspace(plot_data[x_column].min(), plot_data[x_column].max(), 100)
+                ax.plot(x_line, p(x_line), "r--", alpha=0.8, linewidth=2, label=f'Trend (r={correlation:.2f})')
+                ax.legend()
+
+            # Add correlation annotation
+            ax.text(0.05, 0.95, f'Correlation: {correlation:.3f}', transform=ax.transAxes,
+                    fontsize=11, verticalalignment='top',
+                    bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+
+            fig.tight_layout()
+            filepath = _save_chart(fig, title)
 
         return f"Scatter plot created: {title}\nSaved to: {filepath}\n{x_column} vs {y_column} ({len(plot_data)} points, r={correlation:.3f})"
 
     except Exception as e:
-        plt.close()
         return f"Error creating scatter plot: {str(e)}"
 
 
@@ -305,42 +316,39 @@ def _create_pie_chart(filename: str, labels_column: str, values_column: str, tit
             other_row = pd.DataFrame({labels_column: ['Other'], values_column: [other_value]})
             plot_data = pd.concat([top_data, other_row], ignore_index=True)
 
-        _setup_chart_style()
-        fig, ax = plt.subplots(figsize=(10, 8))
+        with _new_figure((10, 8)) as (fig, ax):
+            # Create pie chart
+            colors = matplotlib.colormaps['Set3'](np.linspace(0, 1, len(plot_data)))
+            wedges, texts, autotexts = ax.pie(
+                plot_data[values_column],
+                labels=plot_data[labels_column],
+                autopct='%1.1f%%',
+                colors=colors,
+                explode=[0.02] * len(plot_data),
+                shadow=True,
+                startangle=90
+            )
 
-        # Create pie chart
-        colors = plt.cm.Set3(np.linspace(0, 1, len(plot_data)))
-        wedges, texts, autotexts = ax.pie(
-            plot_data[values_column],
-            labels=plot_data[labels_column],
-            autopct='%1.1f%%',
-            colors=colors,
-            explode=[0.02] * len(plot_data),
-            shadow=True,
-            startangle=90
-        )
+            # Style the text
+            for autotext in autotexts:
+                autotext.set_fontsize(10)
+                autotext.set_fontweight('bold')
 
-        # Style the text
-        for autotext in autotexts:
-            autotext.set_fontsize(10)
-            autotext.set_fontweight('bold')
+            ax.set_title(title, fontsize=14, fontweight='bold', pad=20)
 
-        ax.set_title(title, fontsize=14, fontweight='bold', pad=20)
+            # Add legend
+            ax.legend(wedges, plot_data[labels_column],
+                      title=labels_column,
+                      loc="center left",
+                      bbox_to_anchor=(1, 0, 0.5, 1))
 
-        # Add legend
-        ax.legend(wedges, plot_data[labels_column],
-                  title=labels_column,
-                  loc="center left",
-                  bbox_to_anchor=(1, 0, 0.5, 1))
-
-        plt.tight_layout()
-        filepath = _save_chart(title)
+            fig.tight_layout()
+            filepath = _save_chart(fig, title)
 
         total = plot_data[values_column].sum()
         return f"Pie chart created: {title}\nSaved to: {filepath}\nShows {values_column} distribution by {labels_column} ({len(plot_data)} categories, total: {total:,.0f})"
 
     except Exception as e:
-        plt.close()
         return f"Error creating pie chart: {str(e)}"
 
 

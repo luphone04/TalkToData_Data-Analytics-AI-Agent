@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       response: data.response,
       charts: data.charts || [],
+      chart_errors: data.chart_errors || [],
       data: data.data || null,
     });
   } catch (error) {

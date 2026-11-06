@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Download, Maximize2, X } from "lucide-react";
+import { Download, ImageOff, Maximize2, X } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,10 +21,18 @@ interface ChartDisplayProps {
 export function ChartDisplay({ src, alt = "Chart", title, chartId }: ChartDisplayProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   const handleDownload = async () => {
     try {
       const response = await fetch(src);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.startsWith("image/")) {
+        throw new Error(`Unexpected content type: ${contentType || "unknown"}`);
+      }
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -35,27 +44,42 @@ export function ChartDisplay({ src, alt = "Chart", title, chartId }: ChartDispla
       document.body.removeChild(a);
     } catch (error) {
       console.error("Download failed:", error);
+      toast.error("Chart download failed. The image is not available.");
     }
   };
+
+  const errorPlaceholder = (
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center text-sm text-zinc-500 dark:text-zinc-400">
+      <ImageOff className="h-6 w-6" />
+      <p>This chart could not be loaded.</p>
+    </div>
+  );
 
   return (
     <>
       <div className="relative group rounded-lg overflow-hidden border bg-white dark:bg-zinc-800 max-w-md">
         {/* Chart Image */}
         <div className="relative aspect-[4/3] bg-zinc-100 dark:bg-zinc-900">
-          {isLoading && (
+          {isLoading && !hasError && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
             </div>
           )}
-          <Image
-            src={src}
-            alt={alt}
-            fill
-            className="object-contain"
-            onLoad={() => setIsLoading(false)}
-            onError={() => setIsLoading(false)}
-          />
+          {hasError ? (
+            errorPlaceholder
+          ) : (
+            <Image
+              src={src}
+              alt={alt}
+              fill
+              className="object-contain"
+              onLoad={() => setIsLoading(false)}
+              onError={() => {
+                setIsLoading(false);
+                setHasError(true);
+              }}
+            />
+          )}
         </div>
 
         {/* Title */}
@@ -100,12 +124,17 @@ export function ChartDisplay({ src, alt = "Chart", title, chartId }: ChartDispla
               <X className="h-4 w-4" />
             </Button>
             <div className="relative aspect-[4/3] bg-zinc-100 dark:bg-zinc-900">
-              <Image
-                src={src}
-                alt={alt}
-                fill
-                className="object-contain"
-              />
+              {hasError ? (
+                errorPlaceholder
+              ) : (
+                <Image
+                  src={src}
+                  alt={alt}
+                  fill
+                  className="object-contain"
+                  onError={() => setHasError(true)}
+                />
+              )}
             </div>
             <div className="p-4 border-t flex justify-between items-center">
               <span className="font-medium">{title || "Chart"}</span>

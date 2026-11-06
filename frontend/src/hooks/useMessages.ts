@@ -89,6 +89,13 @@ export function useMessages(conversationId?: string) {
         }
 
         const data = await response.json();
+        const chartErrors: string[] = data.chart_errors || [];
+
+        if (chartErrors.length > 0) {
+          toast.warning(
+            `Analysis finished, but ${chartErrors.length} chart${chartErrors.length > 1 ? "s" : ""} could not be delivered.`
+          );
+        }
 
         // Add assistant message to database
         const { data: assistantMessage, error: assistantMsgError } = await supabase
@@ -97,7 +104,10 @@ export function useMessages(conversationId?: string) {
             conversation_id: targetConversationId,
             role: "assistant",
             content: data.response,
-            metadata: data.charts ? { charts: data.charts } : {},
+            metadata: {
+              ...(data.charts ? { charts: data.charts } : {}),
+              ...(chartErrors.length > 0 ? { chart_errors: chartErrors } : {}),
+            },
           })
           .select()
           .single();

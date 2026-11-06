@@ -26,6 +26,7 @@ class ChatResponse(BaseModel):
     """Response body for chat endpoint."""
     response: str
     charts: list[str] = []
+    chart_errors: list[str] = []  # Charts generated but not delivered
     datasets_loaded: list[str] = []
     error: bool = False
     usage: dict | None = None  # Daily usage info

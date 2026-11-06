@@ -11,6 +11,7 @@ export interface Message {
   created_at: string;
   metadata?: {
     charts?: string[];
+    chart_errors?: string[];
     file_id?: string;
   };
 }
@@ -72,6 +73,7 @@ export function MessageList({ messages, isLoading, isTyping }: MessageListProps)
               content={message.content}
               timestamp={formatTime(message.created_at)}
               charts={message.metadata?.charts}
+              chartErrors={message.metadata?.chart_errors}
             />
           ))
         )}
