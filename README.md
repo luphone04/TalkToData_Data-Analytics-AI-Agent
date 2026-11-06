@@ -117,3 +117,20 @@ are controlled by Google and your project, not this code. Check AI Studio before
 enabling billing. Each analysis can make multiple model calls.
 
 Do not commit API keys. Rotate any key shared in chat or public files.
+
+## Backend access key (required)
+
+The FastAPI backend only accepts requests from the Next.js server. Both sides
+must share one secret, set as a **server-only** environment variable:
+
+| Where | Variable | Notes |
+|---|---|---|
+| Backend (Render/Railway, or root `.env` locally) | `BACKEND_API_KEY` | Required. If missing, every `/api` route except `/api/health` returns 503. |
+| Frontend (Vercel, or `frontend/.env.local` locally) | `BACKEND_API_KEY` | Same value. Do **not** prefix with `NEXT_PUBLIC_`; it must never reach the browser. If missing, chat and usage requests fail with a configuration error. |
+| Frontend | `BACKEND_URL` (or existing `NEXT_PUBLIC_API_URL`) | Backend base URL, e.g. `https://your-backend.onrender.com`. |
+
+Generate a value with `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
+The Next.js routes send it in the `X-Backend-Key` header. `/api/health` stays
+open for platform health checks. The backend also only downloads files from
+signed URLs of the `user-files` bucket in `SUPABASE_URL`, so `SUPABASE_URL` must
+be set on the backend for file analysis to work.

@@ -2,11 +2,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from pathlib import Path
 
 from core.config import settings
-from api.routes import health_router, agent_router, files_router
+from api.routes import health_router, agent_router
 
 
 @asynccontextmanager
@@ -14,10 +12,8 @@ async def lifespan(app: FastAPI):
     """Lifecycle manager for startup and shutdown."""
     # Startup
     print(f"Starting {settings.app_name}...")
-
-    # Create directories
-    Path("user_data").mkdir(exist_ok=True)
-    Path("user_output").mkdir(exist_ok=True)
+    if not settings.backend_api_key:
+        print("WARNING: BACKEND_API_KEY is not set; all /api routes except /api/health will reject requests.")
 
     yield
 
@@ -50,15 +46,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
+# Include routers (agent routes require the X-Backend-Key header; health does not)
 app.include_router(health_router)
 app.include_router(agent_router)
-app.include_router(files_router)
-
-# Serve static files (for charts)
-output_dir = Path(__file__).parent.parent / "output"
-if output_dir.exists():
-    app.mount("/output", StaticFiles(directory=str(output_dir)), name="output")
 
 
 @app.get("/")

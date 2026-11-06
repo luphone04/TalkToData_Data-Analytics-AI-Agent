@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { backendFetch } from "@/lib/backend";
 import { NextRequest, NextResponse } from "next/server";
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -16,7 +15,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Call backend API to get usage
-    const backendResponse = await fetch(`${BACKEND_URL}/api/usage/${user.id}`, {
+    const backendResponse = await backendFetch(`/api/usage/${user.id}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

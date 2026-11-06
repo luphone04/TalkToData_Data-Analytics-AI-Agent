@@ -19,3 +19,5 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      - key: BACKEND_API_KEY
+        sync: false

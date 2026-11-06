@@ -1,5 +1,5 @@
+import io
 import sys
-import os
 import re
 import uuid
 import httpx
@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from agents import Runner, ToolCallItem, ToolCallOutputItem
 from agent import data_analyst
-from tools import LOADED_DATASETS
+from tools import LOADED_DATASETS, request_datasets
 from tools.viz_tools import OUTPUT_DIR as CHART_OUTPUT_DIR
 from core.config import settings
 
@@ -28,19 +28,25 @@ CHART_TOOL_NAMES = {
 }
 SAVED_TO_PATTERN = re.compile(r"^Saved to: (.+\.png)$", re.MULTILINE)
 
+# Conversation history sent to the model
+MAX_HISTORY_MESSAGES = 10
+MAX_HISTORY_CHARS = 1000
+
+
+def _is_allowed_download_url(url: str) -> bool:
+    """Only accept signed URLs for this project's private user-files bucket."""
+    if not settings.supabase_url:
+        return False
+    prefix = settings.supabase_url.rstrip("/") + "/storage/v1/object/sign/user-files/"
+    return url.startswith(prefix) and ".." not in url
+
 
 class AgentService:
     """Service for interacting with the data analysis agent."""
 
     def __init__(self, user_id: str):
-        """Initialize agent service for a specific user."""
+        """Initialize agent service for a specific user (a validated UUID string)."""
         self.user_id = user_id
-        self.user_data_dir = Path(f"user_data/{user_id}")
-        self.user_output_dir = Path(f"user_output/{user_id}")
-
-        # Create user directories
-        self.user_data_dir.mkdir(parents=True, exist_ok=True)
-        self.user_output_dir.mkdir(parents=True, exist_ok=True)
 
         # Initialize Supabase client if configured
         self.supabase = None
@@ -51,25 +57,45 @@ class AgentService:
         """
         Send a message to the agent and get a response.
 
+        Each call gets its own dataset store, so concurrent requests (from
+        different users or from one user's different conversations) never see
+        each other's data.
+
         Args:
             message: User's message
-            conversation_history: List of previous messages for context
+            conversation_history: Previous messages, oldest first ({role, content})
             file_info: Dict with filename and download_url from Supabase Storage
 
         Returns:
             dict with response text, charts, and any data previews
         """
-        # Download and load file if provided
-        if file_info and file_info.get("download_url"):
-            await self._download_and_load_file(file_info)
+        with request_datasets():
+            return await self._chat(message, conversation_history, file_info)
 
-        # Build context from history
+    async def _chat(self, message: str, conversation_history: list[dict] | None, file_info: dict | None) -> dict:
+        # Load the selected file; stop clearly if it cannot be loaded
+        if file_info:
+            load_error = await self._download_and_load_file(file_info)
+            if load_error:
+                return {
+                    "response": load_error,
+                    "charts": [],
+                    "chart_errors": [],
+                    "datasets_loaded": [],
+                    "error": True,
+                }
+
+        # Build context from history (oldest first)
         context = ""
         if conversation_history:
-            for msg in conversation_history[-5:]:  # Keep last 5 messages
-                role = msg.get("role", "user")
-                content = msg.get("content", "")
-                context += f"{role}: {content}\n"
+            lines = []
+            for msg in conversation_history[-MAX_HISTORY_MESSAGES:]:
+                role = "User" if msg.get("role") == "user" else "Assistant"
+                content = str(msg.get("content", ""))
+                if len(content) > MAX_HISTORY_CHARS:
+                    content = content[:MAX_HISTORY_CHARS] + "..."
+                lines.append(f"{role}: {content}")
+            context = "Previous conversation (oldest first):\n" + "\n".join(lines) + "\n\n"
 
         # Add loaded files info to message context
         loaded_files = list(LOADED_DATASETS.keys())
@@ -77,7 +103,7 @@ class AgentService:
             message = f"[Available datasets: {', '.join(loaded_files)}]\n\n{message}"
 
         # Run the agent
-        full_message = f"{context}\nuser: {message}" if context else message
+        full_message = f"{context}Current request:\n{message}" if context else message
 
         try:
             result = await Runner.run(
@@ -116,48 +142,54 @@ class AgentService:
                 "error": True,
             }
 
-    async def _download_and_load_file(self, file_info: dict) -> bool:
-        """Download file from Supabase Storage URL and load into LOADED_DATASETS."""
+    async def _download_and_load_file(self, file_info: dict) -> str | None:
+        """
+        Download the selected file and load it into this request's datasets.
+
+        The file is parsed in memory and never written to local disk, so files
+        with the same original name cannot overwrite each other.
+
+        Returns None on success, or a user-facing message explaining the failure.
+        """
+        # Display name only; never used as a filesystem path
+        filename = Path(str(file_info.get("filename") or "data.csv")).name
+        download_url = file_info.get("download_url")
+        failed = f"Could not load the selected file '{filename}'."
+
+        if not download_url:
+            return f"{failed} No download link was available. Please select the file again."
+        if not _is_allowed_download_url(download_url):
+            print(f"Rejected download URL for {filename}")
+            return f"{failed} The download link was not accepted."
+
+        ext = Path(filename).suffix.lower()
+        if ext not in (".csv", ".xlsx", ".xls"):
+            return f"{failed} Unsupported file type '{ext or 'none'}'. Use CSV or Excel files."
+
         try:
-            filename = file_info.get("filename", "data.csv")
-            download_url = file_info.get("download_url")
-
-            if not download_url:
-                print(f"No download URL for file: {filename}")
-                return False
-
-            # Skip if already loaded
-            if filename in LOADED_DATASETS:
-                print(f"File already loaded: {filename}")
-                return True
-
-            # Download file content
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=False) as client:
                 response = await client.get(download_url)
                 response.raise_for_status()
                 content = response.content
-
-            # Save to local user directory
-            local_path = self.user_data_dir / filename
-            local_path.write_bytes(content)
-
-            # Load into pandas DataFrame
-            if filename.lower().endswith('.csv'):
-                df = pd.read_csv(local_path)
-            elif filename.lower().endswith(('.xlsx', '.xls')):
-                df = pd.read_excel(local_path)
-            else:
-                print(f"Unsupported file type: {filename}")
-                return False
-
-            # Add to LOADED_DATASETS so agent can access it
-            LOADED_DATASETS[filename] = df
-            print(f"Loaded file: {filename} with {len(df)} rows")
-            return True
-
         except Exception as e:
-            print(f"Failed to download/load file: {e}")
-            return False
+            print(f"Failed to download {filename}: {e}")
+            return f"{failed} It could not be downloaded from storage. Please try again."
+
+        if len(content) > settings.max_file_size_mb * 1024 * 1024:
+            return f"{failed} It is larger than {settings.max_file_size_mb}MB."
+
+        try:
+            if ext == ".csv":
+                df = pd.read_csv(io.BytesIO(content))
+            else:
+                df = pd.read_excel(io.BytesIO(content))
+        except Exception as e:
+            print(f"Failed to parse {filename}: {e}")
+            return f"{failed} It could not be read as a {ext} file ({type(e).__name__}). Please check the file and upload it again."
+
+        LOADED_DATASETS[filename] = df
+        print(f"Loaded file: {filename} with {len(df)} rows")
+        return None
 
     @staticmethod
     def _collect_chart_paths(result) -> tuple[list[Path], list[str]]:
@@ -236,33 +268,3 @@ class AgentService:
         except Exception as e:
             print(f"Failed to upload chart {chart_path.name}: {e}")
             return None, "A chart was created but could not be uploaded."
-
-    def list_files(self) -> list[dict]:
-        """List data files for this user."""
-        files = []
-        if self.user_data_dir.exists():
-            for f in self.user_data_dir.iterdir():
-                if f.suffix.lower() in ['.csv', '.xlsx', '.xls']:
-                    files.append({
-                        "filename": f.name,
-                        "size": f.stat().st_size,
-                        "modified": f.stat().st_mtime,
-                    })
-        return files
-
-    def save_file(self, filename: str, content: bytes) -> str:
-        """Save uploaded file to user's data directory."""
-        file_path = self.user_data_dir / filename
-        file_path.write_bytes(content)
-        return str(file_path)
-
-    def delete_file(self, filename: str) -> bool:
-        """Delete a file from user's data directory."""
-        file_path = self.user_data_dir / filename
-        if file_path.exists():
-            file_path.unlink()
-            # Also remove from loaded datasets if present
-            if filename in LOADED_DATASETS:
-                del LOADED_DATASETS[filename]
-            return True
-        return False

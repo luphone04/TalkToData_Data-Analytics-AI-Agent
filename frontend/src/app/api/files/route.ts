@@ -1,8 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import { backendFetch } from "@/lib/backend";
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // GET: List user's files
 export async function GET() {
@@ -121,7 +120,7 @@ export async function POST(request: NextRequest) {
 
     // Track file upload usage
     try {
-      await fetch(`${BACKEND_URL}/api/track-usage`, {
+      await backendFetch("/api/track-usage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     supabase_anon_key: str = ""
     supabase_service_key: str = ""
 
+    # Shared secret the Next.js server sends in the X-Backend-Key header.
+    # Required: when unset, every /api route except /api/health is rejected.
+    backend_api_key: str = ""
+
     # App settings
     app_name: str = "Data Analysis Agent API"
     debug: bool = False
