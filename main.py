@@ -73,7 +73,7 @@ def print_welcome():
     print("  Data Analysis Agent")
     print("=" * 50)
     print()
-    print("I can help you analyze CSV and Excel files.")
+    print("I can help you analyze CSV and Excel (.xlsx) files.")
     print()
     print("Commands:")
     print("  • Type your question or request")

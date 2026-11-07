@@ -1,8 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import { backendFetch } from "@/lib/backend";
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // GET: List user's files
 export async function GET() {
@@ -49,18 +48,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    // Validate file type
-    const allowedTypes = [
-      "text/csv",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    ];
+    // Validate file type by extension (browsers report CSV MIME types inconsistently)
     const extension = file.name.split(".").pop()?.toLowerCase();
-    const allowedExtensions = ["csv", "xls", "xlsx"];
+    const allowedExtensions = ["csv", "xlsx"];
 
-    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(extension || "")) {
+    if (!extension || !allowedExtensions.includes(extension)) {
       return NextResponse.json(
-        { error: "Invalid file type. Please upload CSV or Excel files." },
+        { error: "Invalid file type. Please upload a CSV or Excel (.xlsx) file." },
         { status: 400 }
       );
     }
@@ -121,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     // Track file upload usage
     try {
-      await fetch(`${BACKEND_URL}/api/track-usage`, {
+      await backendFetch("/api/track-usage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -61,6 +61,16 @@ class UsageService:
             print(f"Failed to track usage: {e}")
             return False
 
+    def _empty_usage(self) -> dict:
+        """Usage shape returned when Supabase is unavailable (same keys as a real result)."""
+        return {
+            "message_count": 0,
+            "upload_count": 0,
+            "tokens_used": 0,
+            "message_limit": self.DAILY_MESSAGE_LIMIT,
+            "upload_limit": self.DAILY_FILE_UPLOAD_LIMIT,
+        }
+
     async def get_daily_usage(self, user_id: str) -> dict:
         """
         Get user's usage for today.
@@ -69,7 +79,7 @@ class UsageService:
             dict with message_count, upload_count, tokens_used
         """
         if not self.supabase:
-            return {"message_count": 0, "upload_count": 0, "tokens_used": 0}
+            return self._empty_usage()
 
         try:
             # Get today's date range
@@ -107,7 +117,7 @@ class UsageService:
 
         except Exception as e:
             print(f"Failed to get daily usage: {e}")
-            return {"message_count": 0, "upload_count": 0, "tokens_used": 0}
+            return self._empty_usage()
 
     async def check_message_limit(self, user_id: str) -> tuple[bool, int]:
         """

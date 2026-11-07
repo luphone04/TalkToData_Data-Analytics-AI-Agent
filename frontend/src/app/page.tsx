@@ -48,7 +48,7 @@ export default async function Home() {
             <span className="text-blue-600"> get instant insights</span>
           </h1>
           <p className="text-xl text-zinc-600 dark:text-zinc-400 mb-8 max-w-2xl mx-auto">
-            Upload CSV or Excel files and ask questions in plain English.
+            Upload CSV or Excel (.xlsx) files and ask questions in plain English.
             Our AI analyzes your data and creates beautiful visualizations in seconds.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -85,7 +85,7 @@ export default async function Home() {
             </div>
             <h3 className="text-lg font-semibold mb-2">Upload Any Data</h3>
             <p className="text-zinc-600 dark:text-zinc-400">
-              Support for CSV and Excel files. Just drag and drop to get started with your analysis.
+              Support for CSV and Excel (.xlsx) files. Just drag and drop to get started with your analysis.
             </p>
           </div>
           <div className="p-6 rounded-xl border bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md transition-shadow">
@@ -115,7 +115,7 @@ export default async function Home() {
             <div className="text-center">
               <div className="h-12 w-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-bold mx-auto mb-4">1</div>
               <h3 className="font-semibold mb-2">Upload your data</h3>
-              <p className="text-zinc-600 dark:text-zinc-400 text-sm">Drag and drop your CSV or Excel file into the app</p>
+              <p className="text-zinc-600 dark:text-zinc-400 text-sm">Drag and drop your CSV or Excel (.xlsx) file into the app</p>
             </div>
             <div className="text-center">
               <div className="h-12 w-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-bold mx-auto mb-4">2</div>

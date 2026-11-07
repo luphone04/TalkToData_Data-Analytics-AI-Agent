@@ -246,7 +246,7 @@ export default function HowItWorksPage() {
               </CardHeader>
               <CardContent>
                 <ul className="text-sm space-y-1 text-zinc-600 dark:text-zinc-400">
-                  <li>• Load datasets (CSV, Excel)</li>
+                  <li>• Load datasets (CSV, XLSX)</li>
                   <li>• Inspect column schemas</li>
                   <li>• List available files</li>
                 </ul>

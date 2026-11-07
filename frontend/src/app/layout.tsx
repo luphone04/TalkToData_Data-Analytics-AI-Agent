@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "TalkToData - AI Data Analysis",
-  description: "Chat with your data using AI. Upload CSV or Excel files and get instant insights, visualizations, and analysis.",
+  description: "Chat with your data using AI. Upload CSV or Excel (.xlsx) files and get instant insights, visualizations, and analysis.",
 };
 
 export default function RootLayout({

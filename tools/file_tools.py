@@ -26,10 +26,10 @@ def _validate_filename(filename: str) -> tuple[bool, str]:
         return False, "Invalid filename: path traversal not allowed"
 
     # Check for valid extension
-    valid_extensions = {".csv", ".xlsx", ".xls"}
+    valid_extensions = {".csv", ".xlsx"}
     ext = Path(filename).suffix.lower()
     if ext not in valid_extensions:
-        return False, f"Invalid file type: {ext}. Supported types: CSV, XLSX, XLS"
+        return False, f"Invalid file type: {ext}. Supported types: CSV, XLSX"
 
     # Check if file exists
     file_path = DATA_DIR / filename
@@ -68,7 +68,7 @@ def _list_data_files() -> str:
     # Then check local data directory (for local development)
     local_files = []
     if DATA_DIR.exists():
-        for ext in ["*.csv", "*.xlsx", "*.xls"]:
+        for ext in ["*.csv", "*.xlsx"]:
             local_files.extend(DATA_DIR.glob(ext))
 
     # Only show local files that aren't already loaded
@@ -108,7 +108,7 @@ def _list_data_files() -> str:
 
 
 def _load_dataset(filename: str) -> str:
-    """Load a CSV or Excel file into memory for analysis."""
+    """Load a CSV or Excel (.xlsx) file into memory for analysis."""
     # Check if already loaded (from Supabase Storage upload)
     if filename in LOADED_DATASETS:
         df = LOADED_DATASETS[filename]
@@ -139,7 +139,7 @@ def _load_dataset(filename: str) -> str:
         ext = Path(filename).suffix.lower()
         if ext == ".csv":
             df = pd.read_csv(file_path)
-        elif ext in [".xlsx", ".xls"]:
+        elif ext == ".xlsx":
             df = pd.read_excel(file_path)
         else:
             return f"Error: Unsupported file type: {ext}"
@@ -226,7 +226,7 @@ def _get_column_info(filename: str) -> str:
 def list_data_files() -> str:
     """
     List all available data files in the data directory.
-    Shows CSV and Excel files with their sizes.
+    Shows CSV and Excel (.xlsx) files with their sizes.
     Use this first to see what data is available for analysis.
     """
     return _list_data_files()
@@ -235,7 +235,7 @@ def list_data_files() -> str:
 @function_tool
 def load_dataset(filename: str) -> str:
     """
-    Load a CSV or Excel file into memory for analysis.
+    Load a CSV or Excel (.xlsx) file into memory for analysis.
     If the file is already loaded (from user upload), returns its info directly.
 
     Args:
