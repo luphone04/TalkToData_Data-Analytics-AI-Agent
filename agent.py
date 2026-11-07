@@ -22,7 +22,7 @@ if not gemini_key:
     raise RuntimeError("Set GEMINI_API_KEY in your backend environment or .env file.")
 
 model = OpenAIChatCompletionsModel(
-    model=os.getenv("GEMINI_MODEL", "gemini-3.6-flash"),
+    model=os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite"),
     openai_client=AsyncOpenAI(
         api_key=gemini_key,
         base_url="https://generativelanguage.googleapis.com/v1beta/openai/",

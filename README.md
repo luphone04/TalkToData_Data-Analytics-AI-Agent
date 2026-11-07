@@ -112,7 +112,7 @@ API key is not required and OpenAI tracing is disabled.
 4. Redeploy the backend after changing its environment. The frontend's existing
    Supabase and backend URL environment variables remain necessary.
 
-`GEMINI_MODEL` defaults to `gemini-3.6-flash`. Free-tier availability and quotas
+`GEMINI_MODEL` defaults to `gemini-3.5-flash-lite`. Free-tier availability and quotas
 are controlled by Google and your project, not this code. Check AI Studio before
 enabling billing. Each analysis can make multiple model calls.
 
