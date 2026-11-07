@@ -3,6 +3,11 @@ import { backendFetch, BackendConfigError } from "@/lib/backend";
 import { loadConversationContext } from "@/lib/chatHistory";
 import { NextRequest, NextResponse } from "next/server";
 
+// The agent can take minutes (a local two-chart request took 203 s). 300 s is
+// the maximum on Vercel Hobby with Fluid compute (also its default); Pro allows
+// up to 800 s. If exceeded, Vercel returns 504 FUNCTION_INVOCATION_TIMEOUT.
+export const maxDuration = 300;
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
 
