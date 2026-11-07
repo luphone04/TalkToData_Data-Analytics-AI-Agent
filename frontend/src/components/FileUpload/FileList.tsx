@@ -33,10 +33,11 @@ interface FileListProps {
   files: UserFile[];
   onDelete?: (fileId: string) => void;
   onSelect?: (file: UserFile) => void;
+  selectedId?: string;
   isLoading?: boolean;
 }
 
-export function FileList({ files, onDelete, onSelect, isLoading }: FileListProps) {
+export function FileList({ files, onDelete, onSelect, selectedId, isLoading }: FileListProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<UserFile | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -88,7 +89,7 @@ export function FileList({ files, onDelete, onSelect, isLoading }: FileListProps
       <div className="text-center py-8 text-zinc-500">
         <FileSpreadsheet className="h-10 w-10 mx-auto mb-3 text-zinc-300" />
         <p>No files uploaded yet</p>
-        <p className="text-sm">Upload a CSV or Excel file to get started</p>
+        <p className="text-sm">Upload a CSV or Excel (.xlsx) file to get started</p>
       </div>
     );
   }
@@ -108,7 +109,11 @@ export function FileList({ files, onDelete, onSelect, isLoading }: FileListProps
           {files.map((file) => (
             <TableRow
               key={file.id}
-              className={onSelect ? "cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800" : ""}
+              className={
+                (onSelect ? "cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 " : "") +
+                (file.id === selectedId ? "bg-blue-50 dark:bg-blue-900/20" : "")
+              }
+              aria-selected={file.id === selectedId}
               onClick={() => onSelect?.(file)}
             >
               <TableCell>

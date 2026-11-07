@@ -69,7 +69,7 @@ async def chat(request: ChatRequest):
     Send a message to the data analysis agent.
 
     The agent can:
-    - Load and analyze CSV/Excel files
+    - Load and analyze CSV/Excel (.xlsx) files
     - Perform statistical analysis
     - Create visualizations
     - Answer questions about data

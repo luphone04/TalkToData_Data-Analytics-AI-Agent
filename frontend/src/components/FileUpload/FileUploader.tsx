@@ -20,13 +20,7 @@ interface UploadedFile {
   mimeType: string;
 }
 
-const ACCEPTED_TYPES = [
-  "text/csv",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-];
-
-const ACCEPTED_EXTENSIONS = [".csv", ".xls", ".xlsx"];
+const ACCEPTED_EXTENSIONS = [".csv", ".xlsx"];
 
 export function FileUploader({ onUploadComplete, maxSizeMB = 10 }: FileUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
@@ -38,10 +32,10 @@ export function FileUploader({ onUploadComplete, maxSizeMB = 10 }: FileUploaderP
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
   const validateFile = (file: File): string | null => {
-    // Check file type
+    // Check file type by extension (browsers report CSV MIME types inconsistently)
     const extension = "." + file.name.split(".").pop()?.toLowerCase();
-    if (!ACCEPTED_TYPES.includes(file.type) && !ACCEPTED_EXTENSIONS.includes(extension)) {
-      return "Please upload a CSV or Excel file (.csv, .xls, .xlsx)";
+    if (!ACCEPTED_EXTENSIONS.includes(extension)) {
+      return "Please upload a CSV or Excel (.xlsx) file";
     }
 
     // Check file size
@@ -171,7 +165,7 @@ export function FileUploader({ onUploadComplete, maxSizeMB = 10 }: FileUploaderP
           <label>
             <input
               type="file"
-              accept=".csv,.xls,.xlsx"
+              accept=".csv,.xlsx"
               onChange={handleFileSelect}
               className="hidden"
             />
@@ -180,7 +174,7 @@ export function FileUploader({ onUploadComplete, maxSizeMB = 10 }: FileUploaderP
             </Button>
           </label>
           <p className="text-xs text-zinc-500 mt-3">
-            CSV or Excel files up to {maxSizeMB}MB
+            CSV or Excel (.xlsx) files up to {maxSizeMB}MB
           </p>
         </div>
       ) : (

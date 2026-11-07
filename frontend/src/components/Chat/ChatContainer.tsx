@@ -5,7 +5,7 @@ import { ConversationList, Conversation } from "./ConversationList";
 import { MessageList, Message } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 import { useConversations, useMessages } from "@/hooks";
-import { Menu, X, Info } from "lucide-react";
+import { Menu, X, Info, FileSpreadsheet, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
@@ -16,10 +16,20 @@ import {
 
 interface ChatContainerProps {
   selectedFileId?: string;
+  selectedFileName?: string;
+  /** Why no dataset is selected for this conversation (e.g. its file was deleted) */
+  datasetNotice?: string;
+  onActiveConversationChange?: (conversationId: string | null) => void;
   onMessageSent?: () => void;
 }
 
-export function ChatContainer({ selectedFileId, onMessageSent }: ChatContainerProps) {
+export function ChatContainer({
+  selectedFileId,
+  selectedFileName,
+  datasetNotice,
+  onActiveConversationChange,
+  onMessageSent,
+}: ChatContainerProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false); // Closed by default on mobile
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
 
@@ -43,6 +53,12 @@ export function ChatContainer({ selectedFileId, onMessageSent }: ChatContainerPr
       setActiveConversation(conversations[0]);
     }
   }, [conversations, conversationsLoading, activeConversation]);
+
+  // Let the dashboard scope the selected dataset to the open conversation
+  const activeConversationId = activeConversation?.id ?? null;
+  useEffect(() => {
+    onActiveConversationChange?.(activeConversationId);
+  }, [activeConversationId, onActiveConversationChange]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -164,6 +180,33 @@ export function ChatContainer({ selectedFileId, onMessageSent }: ChatContainerPr
               isLoading={messagesLoading}
               isTyping={isSending}
             />
+            {/* Dataset used for messages in this conversation */}
+            {selectedFileId ? (
+              <div className="shrink-0 flex items-center gap-2 border-t px-4 py-2 text-xs text-zinc-600 dark:text-zinc-400">
+                <FileSpreadsheet className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                <span className="truncate">
+                  Dataset: <span className="font-medium">{selectedFileName}</span>
+                </span>
+              </div>
+            ) : (
+              <div
+                role="status"
+                className={
+                  datasetNotice
+                    ? "shrink-0 flex items-start gap-2 border-t px-4 py-2 text-xs bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300"
+                    : "shrink-0 flex items-start gap-2 border-t px-4 py-2 text-xs text-zinc-500"
+                }
+              >
+                {datasetNotice ? (
+                  <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                ) : (
+                  <FileSpreadsheet className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                )}
+                <span>
+                  {datasetNotice ?? "No dataset selected. Select a dataset from Your Files to analyze it."}
+                </span>
+              </div>
+            )}
             <ChatInput onSend={handleSendMessage} isLoading={isSending} />
           </>
         ) : (

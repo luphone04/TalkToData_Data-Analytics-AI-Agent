@@ -29,7 +29,7 @@ class Settings(BaseSettings):
 
     # File storage
     max_file_size_mb: int = 10
-    allowed_extensions: list[str] = ["csv", "xlsx", "xls"]
+    allowed_extensions: list[str] = ["csv", "xlsx"]
 
     class Config:
         env_file = ".env"

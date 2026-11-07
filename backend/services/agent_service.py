@@ -163,8 +163,10 @@ class AgentService:
             return f"{failed} The download link was not accepted."
 
         ext = Path(filename).suffix.lower()
-        if ext not in (".csv", ".xlsx", ".xls"):
-            return f"{failed} Unsupported file type '{ext or 'none'}'. Use CSV or Excel files."
+        if ext == ".xls":
+            return f"{failed} Legacy .xls files are not supported. Save it as .xlsx or .csv and upload it again."
+        if ext not in (".csv", ".xlsx"):
+            return f"{failed} Unsupported file type '{ext or 'none'}'. Use CSV or Excel (.xlsx) files."
 
         try:
             async with httpx.AsyncClient(timeout=30.0, follow_redirects=False) as client:

@@ -6,12 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileSpreadsheet } from "lucide-react";
 
 interface FilesPanelProps {
+  selectedFileId?: string;
   onFileSelect?: (file: UserFile) => void;
   onFileUploaded?: () => void;
+  onFileDeleted?: (fileId: string) => void;
 }
 
-export function FilesPanel({ onFileSelect, onFileUploaded }: FilesPanelProps) {
+export function FilesPanel({ selectedFileId, onFileSelect, onFileUploaded, onFileDeleted }: FilesPanelProps) {
   const { files, isLoading, deleteFile, addFile } = useFiles();
+
+  const handleDelete = async (fileId: string) => {
+    await deleteFile(fileId); // throws if the delete failed
+    onFileDeleted?.(fileId);
+  };
 
   const handleUploadComplete = (file: { id: string; filename: string; originalName: string; size: number; mimeType: string }) => {
     // Convert to UserFile format
@@ -41,7 +48,8 @@ export function FilesPanel({ onFileSelect, onFileUploaded }: FilesPanelProps) {
         <FileList
           files={files}
           isLoading={isLoading}
-          onDelete={deleteFile}
+          selectedId={selectedFileId}
+          onDelete={handleDelete}
           onSelect={onFileSelect}
         />
       </CardContent>
